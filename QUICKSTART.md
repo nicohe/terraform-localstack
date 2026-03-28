@@ -19,10 +19,8 @@ chmod +x scripts/*.sh
 ### 2️⃣ Inicializar Terraform
 ```bash
 export AWS_ENDPOINT_URL=http://localhost:4566
-terraform init \
-  -backend-config="endpoints.s3=http://localhost:4566" \
-  -backend-config="access_key=test" \
-  -backend-config="secret_key=test"
+export AWS_ENDPOINT_URL_S3=http://s3.localhost.localstack.cloud:4566
+terraform init
 ```
 
 ### 3️⃣ Desplegar

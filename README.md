@@ -62,6 +62,7 @@ chmod +x scripts/*.sh
 
 # Configurar LocalStack (crear bucket S3, etc)
 export AWS_ENDPOINT_URL=http://localhost:4566
+export AWS_ENDPOINT_URL_S3=http://s3.localhost.localstack.cloud:4566
 ./scripts/setup-localstack.sh
 ```
 
@@ -69,10 +70,7 @@ export AWS_ENDPOINT_URL=http://localhost:4566
 
 ```bash
 # Inicializar con backend S3 de LocalStack
-terraform init \
-  -backend-config="endpoints.s3=http://localhost:4566" \
-  -backend-config="access_key=test" \
-  -backend-config="secret_key=test"
+terraform init
 ```
 
 ### 4. Desplegar a Desarrollo
@@ -299,11 +297,9 @@ awslocal s3 mb s3://terraform-state-roxs
 ### Error de backend init
 ```bash
 # Reinicializar con configuración correcta
+export AWS_ENDPOINT_URL_S3=http://s3.localhost.localstack.cloud:4566
 rm -rf .terraform
-terraform init \
-  -backend-config="endpoints.s3=http://localhost:4566" \
-  -backend-config="access_key=test" \
-  -backend-config="secret_key=test"
+terraform init
 ```
 
 ### Puerto ya en uso

@@ -32,6 +32,7 @@ env:
   AWS_ACCESS_KEY_ID: 'test'
   AWS_SECRET_ACCESS_KEY: 'test'
   AWS_ENDPOINT_URL: 'http://localhost:4566'
+  AWS_ENDPOINT_URL_S3: 'http://s3.localhost.localstack.cloud:4566'
 
 jobs:
   setup-localstack:
@@ -94,11 +95,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        run: |
-          terraform init \
-            -backend-config="endpoints.s3=http://localhost:4566" \
-            -backend-config="access_key=test" \
-            -backend-config="secret_key=test"
+        run: terraform init
 
       - name: Select Workspace
         run: |
@@ -141,11 +138,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        run: |
-          terraform init \
-            -backend-config="endpoints.s3=http://localhost:4566" \
-            -backend-config="access_key=test" \
-            -backend-config="secret_key=test"
+        run: terraform init
 
       - name: Select Workspace
         run: |
@@ -182,11 +175,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        run: |
-          terraform init \
-            -backend-config="endpoints.s3=http://localhost:4566" \
-            -backend-config="access_key=test" \
-            -backend-config="secret_key=test"
+        run: terraform init
 
       - name: Select Workspace
         run: |

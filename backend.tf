@@ -18,10 +18,10 @@ terraform {
     key    = "terraform.tfstate"
     region = "us-east-1"
 
-    # Estas opciones se configuran en tiempo de ejecución:
-    # -backend-config="endpoints.s3=http://localhost:4566"
-    # -backend-config="access_key=test"
-    # -backend-config="secret_key=test"
+    # Configuración mediante variables de entorno:
+    # export AWS_ACCESS_KEY_ID="test"
+    # export AWS_SECRET_ACCESS_KEY="test"
+    # export AWS_ENDPOINT_URL_S3="http://s3.localhost.localstack.cloud:4566"
     
     skip_credentials_validation = true
     skip_metadata_api_check     = true
