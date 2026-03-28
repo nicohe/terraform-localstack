@@ -57,15 +57,17 @@ jobs:
 
       - name: Wait for LocalStack
         id: health
+        working-directory: semana-4/dia-27
         run: |
-          chmod +x semana-4/dia-27/scripts/wait-for-localstack.sh
-          semana-4/dia-27/scripts/wait-for-localstack.sh
+          chmod +x scripts/wait-for-localstack.sh
+          ./scripts/wait-for-localstack.sh
           echo "ready=true" >> $GITHUB_OUTPUT
 
       - name: Setup S3 Bucket
+        working-directory: semana-4/dia-27
         run: |
-          chmod +x semana-4/dia-27/scripts/setup-localstack.sh
-          semana-4/dia-27/scripts/setup-localstack.sh
+          chmod +x scripts/setup-localstack.sh
+          ./scripts/setup-localstack.sh
 
       - name: Verify Setup
         run: |
