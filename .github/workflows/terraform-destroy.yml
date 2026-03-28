@@ -24,6 +24,8 @@ env:
   AWS_SECRET_ACCESS_KEY: 'test'
   AWS_ENDPOINT_URL: 'http://localhost:4566'
   AWS_ENDPOINT_URL_S3: 'http://localhost:4566'
+  AWS_ENDPOINT_URL_IAM: 'http://localhost:4566'
+  AWS_ENDPOINT_URL_STS: 'http://localhost:4566'
 
 jobs:
   validate-destruction:

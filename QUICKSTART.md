@@ -20,6 +20,8 @@ chmod +x scripts/*.sh
 ```bash
 export AWS_ENDPOINT_URL=http://localhost:4566
 export AWS_ENDPOINT_URL_S3=http://localhost:4566
+export AWS_ENDPOINT_URL_IAM=http://localhost:4566
+export AWS_ENDPOINT_URL_STS=http://localhost:4566
 terraform init
 ```
 
