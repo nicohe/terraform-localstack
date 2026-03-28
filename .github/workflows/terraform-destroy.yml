@@ -137,7 +137,7 @@ jobs:
           docker ps --filter label=environment=${{ github.event.inputs.environment }} || echo "No containers found"
           
           echo -e "\n=== S3 State after destruction ==="
-          awslocal s3 ls s3://terraform-state-roxs/ || echo "Bucket empty or not found"
+          aws --endpoint-url=http://localhost:4566 s3 ls s3://terraform-state-roxs/ || echo "Bucket empty or not found"
 
       - name: Delete Workspace
         run: |

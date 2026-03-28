@@ -18,14 +18,14 @@ echo "⏳ Esperando a que LocalStack esté listo..."
 ./scripts/wait-for-localstack.sh
 
 echo "📦 Creando bucket S3 para estado de Terraform..."
-awslocal s3 mb s3://$BUCKET_NAME || echo "Bucket ya existe"
+aws --endpoint-url=$LOCALSTACK_ENDPOINT s3 mb s3://$BUCKET_NAME || echo "Bucket ya existe"
 
 echo "🔒 Habilitando versionado en el bucket..."
-awslocal s3api put-bucket-versioning \
+aws --endpoint-url=$LOCALSTACK_ENDPOINT s3api put-bucket-versioning \
   --bucket $BUCKET_NAME \
   --versioning-configuration Status=Enabled
 
 echo "📋 Listando buckets disponibles..."
-awslocal s3 ls
+aws --endpoint-url=$LOCALSTACK_ENDPOINT s3 ls
 
 echo "✅ LocalStack configurado correctamente!"

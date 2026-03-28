@@ -73,7 +73,7 @@ jobs:
           curl http://localhost:4566/_localstack/health
           
           echo -e "\n=== S3 Buckets ==="
-          awslocal s3 ls
+          aws --endpoint-url=http://localhost:4566 s3 ls
 
   deploy-dev:
     name: Deploy to Development
@@ -120,7 +120,7 @@ jobs:
         if: github.event.inputs.action == 'apply' || github.event_name == 'push'
         run: |
           docker ps --filter label=environment=dev
-          awslocal s3 ls s3://terraform-state-roxs/
+          aws --endpoint-url=http://localhost:4566 s3 ls s3://terraform-state-roxs/
 
   deploy-staging:
     name: Deploy to Staging
