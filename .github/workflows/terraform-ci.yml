@@ -1,0 +1,156 @@
+name: Terraform CI
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'semana-4/dia-27/**'
+      - '.github/workflows/terraform-ci.yml'
+
+env:
+  TF_VERSION: '1.6.0'
+  LOCALSTACK_VERSION: '3.0'
+  AWS_DEFAULT_REGION: 'us-east-1'
+  AWS_ACCESS_KEY_ID: 'test'
+  AWS_SECRET_ACCESS_KEY: 'test'
+  AWS_ENDPOINT_URL: 'http://localhost:4566'
+
+jobs:
+  validate:
+    name: Validar Terraform
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Format Check
+        working-directory: semana-4/dia-27
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        working-directory: semana-4/dia-27
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        working-directory: semana-4/dia-27
+        run: terraform validate
+
+  test:
+    name: Test en LocalStack
+    runs-on: ubuntu-latest
+    needs: validate
+    strategy:
+      matrix:
+        environment: [dev, staging, prod]
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Setup LocalStack
+        run: |
+          docker run -d \
+            --name localstack \
+            -p 4566:4566 \
+            -e SERVICES=s3,ec2,iam,lambda,cloudformation,logs,events \
+            -e DEBUG=1 \
+            -e PERSISTENCE=0 \
+            localstack/localstack:${{ env.LOCALSTACK_VERSION }}
+          
+          # Esperar a que LocalStack esté listo
+          timeout 60 bash -c 'until curl -s http://localhost:4566/_localstack/health | grep -q "\"s3\": \"available\""; do sleep 2; done'
+
+      - name: Crear bucket S3
+        run: |
+          awslocal s3 mb s3://terraform-state-roxs || true
+          
+          awslocal s3api put-bucket-versioning \
+            --bucket terraform-state-roxs \
+            --versioning-configuration Status=Enabled
+
+      - name: Terraform Init
+        working-directory: semana-4/dia-27
+        run: |
+          terraform init \
+            -backend-config="endpoint=http://localhost:4566" \
+            -backend-config="access_key=test" \
+            -backend-config="secret_key=test"
+
+      - name: Terraform Workspace
+        working-directory: semana-4/dia-27
+        run: |
+          terraform workspace new ${{ matrix.environment }} || \
+          terraform workspace select ${{ matrix.environment }}
+
+      - name: Terraform Plan
+        working-directory: semana-4/dia-27
+        run: |
+          terraform plan \
+            -var-file="environments/${{ matrix.environment }}.tfvars" \
+            -out=${{ matrix.environment }}.tfplan
+
+      - name: Upload Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ matrix.environment }}
+          path: semana-4/dia-27/${{ matrix.environment }}.tfplan
+          retention-days: 5
+
+      - name: Mostrar outputs planificados
+        working-directory: semana-4/dia-27
+        run: terraform show ${{ matrix.environment }}.tfplan
+
+      - name: Verificar estado en S3
+        run: |
+          awslocal s3 ls s3://terraform-state-roxs/
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker logs localstack || true
+          docker stop localstack || true
+          docker rm localstack || true
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: semana-4/dia-27
+          soft_fail: true
+
+  comment-pr:
+    name: Comentar en PR
+    runs-on: ubuntu-latest
+    needs: [validate, test, security]
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Comentar resultado
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ **CI Check Passed**\n\n- ✅ Format validated\n- ✅ Configuration validated\n- ✅ Plans generated for all environments\n- ✅ Security scan completed\n\nReady to merge!'
+            })

@@ -1,0 +1,247 @@
+name: Terraform CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'semana-4/dia-27/**'
+      - '.github/workflows/terraform-cd.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+        default: 'plan'
+
+env:
+  TF_VERSION: '1.6.0'
+  LOCALSTACK_VERSION: '3.0'
+  AWS_DEFAULT_REGION: 'us-east-1'
+  AWS_ACCESS_KEY_ID: 'test'
+  AWS_SECRET_ACCESS_KEY: 'test'
+  AWS_ENDPOINT_URL: 'http://localhost:4566'
+
+jobs:
+  setup-localstack:
+    name: Setup LocalStack
+    runs-on: ubuntu-latest
+    outputs:
+      localstack-ready: ${{ steps.health.outputs.ready }}
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Start LocalStack
+        run: |
+          docker run -d \
+            --name localstack \
+            -p 4566:4566 \
+            -e SERVICES=s3,ec2,iam,lambda,cloudformation,logs,events \
+            -e DEBUG=1 \
+            -e PERSISTENCE=1 \
+            -v /tmp/localstack:/var/lib/localstack \
+            localstack/localstack:${{ env.LOCALSTACK_VERSION }}
+
+      - name: Wait for LocalStack
+        id: health
+        run: |
+          chmod +x semana-4/dia-27/scripts/wait-for-localstack.sh
+          semana-4/dia-27/scripts/wait-for-localstack.sh
+          echo "ready=true" >> $GITHUB_OUTPUT
+
+      - name: Setup S3 Bucket
+        run: |
+          chmod +x semana-4/dia-27/scripts/setup-localstack.sh
+          semana-4/dia-27/scripts/setup-localstack.sh
+
+      - name: Verify Setup
+        run: |
+          echo "=== LocalStack Health ==="
+          curl http://localhost:4566/_localstack/health
+          
+          echo -e "\n=== S3 Buckets ==="
+          awslocal s3 ls
+
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: setup-localstack
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+    environment:
+      name: development
+      url: http://localhost:8080
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: semana-4/dia-27
+        run: |
+          terraform init \
+            -backend-config="endpoint=http://localhost:4566" \
+            -backend-config="access_key=test" \
+            -backend-config="secret_key=test"
+
+      - name: Select Workspace
+        working-directory: semana-4/dia-27
+        run: |
+          terraform workspace new dev || terraform workspace select dev
+
+      - name: Terraform Plan
+        working-directory: semana-4/dia-27
+        run: |
+          terraform plan -var-file="environments/dev.tfvars" -out=dev.tfplan
+
+      - name: Terraform Apply
+        if: github.event.inputs.action == 'apply' || github.event_name == 'push'
+        working-directory: semana-4/dia-27
+        run: |
+          terraform apply -auto-approve dev.tfplan
+
+      - name: Show Outputs
+        working-directory: semana-4/dia-27
+        run: terraform output
+
+      - name: Verify Deployment
+        if: github.event.inputs.action == 'apply' || github.event_name == 'push'
+        run: |
+          docker ps --filter label=environment=dev
+          awslocal s3 ls s3://terraform-state-roxs/
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [setup-localstack, deploy-dev]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: http://localhost:8081
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: semana-4/dia-27
+        run: |
+          terraform init \
+            -backend-config="endpoint=http://localhost:4566" \
+            -backend-config="access_key=test" \
+            -backend-config="secret_key=test"
+
+      - name: Select Workspace
+        working-directory: semana-4/dia-27
+        run: |
+          terraform workspace new staging || terraform workspace select staging
+
+      - name: Terraform Plan
+        working-directory: semana-4/dia-27
+        run: |
+          terraform plan -var-file="environments/staging.tfvars" -out=staging.tfplan
+
+      - name: Terraform Apply
+        if: github.event.inputs.action == 'apply'
+        working-directory: semana-4/dia-27
+        run: |
+          terraform apply -auto-approve staging.tfplan
+
+      - name: Show Outputs
+        working-directory: semana-4/dia-27
+        run: terraform output
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [setup-localstack, deploy-staging]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
+    environment:
+      name: production
+      url: http://localhost:80
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: semana-4/dia-27
+        run: |
+          terraform init \
+            -backend-config="endpoint=http://localhost:4566" \
+            -backend-config="access_key=test" \
+            -backend-config="secret_key=test"
+
+      - name: Select Workspace
+        working-directory: semana-4/dia-27
+        run: |
+          terraform workspace new prod || terraform workspace select prod
+
+      - name: Terraform Plan
+        working-directory: semana-4/dia-27
+        run: |
+          terraform plan -var-file="environments/prod.tfvars" -out=prod.tfplan
+
+      - name: Manual Approval Required
+        run: |
+          echo "⚠️  Production deployment requires manual approval"
+          echo "Review the plan above and approve in GitHub Actions UI"
+
+      - name: Terraform Apply
+        if: github.event.inputs.action == 'apply'
+        working-directory: semana-4/dia-27
+        run: |
+          terraform apply -auto-approve prod.tfplan
+
+      - name: Show Outputs
+        working-directory: semana-4/dia-27
+        run: terraform output
+
+      - name: Create Deployment Tag
+        if: github.event.inputs.action == 'apply'
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a "prod-$(date +%Y%m%d-%H%M%S)" -m "Production deployment"
+          git push origin --tags
+
+  cleanup:
+    name: Cleanup Resources
+    runs-on: ubuntu-latest
+    needs: [deploy-dev, deploy-staging, deploy-prod]
+    if: always()
+    
+    steps:
+      - name: Stop LocalStack
+        if: always()
+        run: |
+          docker logs localstack || true
+          docker stop localstack || true
+          docker rm localstack || true
