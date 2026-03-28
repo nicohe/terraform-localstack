@@ -62,7 +62,7 @@ chmod +x scripts/*.sh
 
 # Configurar LocalStack (crear bucket S3, etc)
 export AWS_ENDPOINT_URL=http://localhost:4566
-export AWS_ENDPOINT_URL_S3=http://s3.localhost.localstack.cloud:4566
+export AWS_ENDPOINT_URL_S3=http://localhost:4566
 ./scripts/setup-localstack.sh
 ```
 
@@ -297,7 +297,7 @@ awslocal s3 mb s3://terraform-state-roxs
 ### Error de backend init
 ```bash
 # Reinicializar con configuración correcta
-export AWS_ENDPOINT_URL_S3=http://s3.localhost.localstack.cloud:4566
+export AWS_ENDPOINT_URL_S3=http://localhost:4566
 rm -rf .terraform
 terraform init
 ```
