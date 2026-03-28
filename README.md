@@ -70,7 +70,7 @@ export AWS_ENDPOINT_URL=http://localhost:4566
 ```bash
 # Inicializar con backend S3 de LocalStack
 terraform init \
-  -backend-config="endpoint=http://localhost:4566" \
+  -backend-config="endpoints.s3=http://localhost:4566" \
   -backend-config="access_key=test" \
   -backend-config="secret_key=test"
 ```
@@ -301,7 +301,7 @@ awslocal s3 mb s3://terraform-state-roxs
 # Reinicializar con configuración correcta
 rm -rf .terraform
 terraform init \
-  -backend-config="endpoint=http://localhost:4566" \
+  -backend-config="endpoints.s3=http://localhost:4566" \
   -backend-config="access_key=test" \
   -backend-config="secret_key=test"
 ```

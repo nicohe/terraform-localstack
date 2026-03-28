@@ -20,7 +20,7 @@ chmod +x scripts/*.sh
 ```bash
 export AWS_ENDPOINT_URL=http://localhost:4566
 terraform init \
-  -backend-config="endpoint=http://localhost:4566" \
+  -backend-config="endpoints.s3=http://localhost:4566" \
   -backend-config="access_key=test" \
   -backend-config="secret_key=test"
 ```
@@ -83,7 +83,7 @@ docker logs terraform-localstack
 **Backend error:**
 ```bash
 rm -rf .terraform
-terraform init -backend-config="endpoint=http://localhost:4566" \
+terraform init -backend-config="endpoints.s3=http://localhost:4566" \
   -backend-config="access_key=test" -backend-config="secret_key=test"
 ```
 
