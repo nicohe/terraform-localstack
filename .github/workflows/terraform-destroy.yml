@@ -72,13 +72,11 @@ jobs:
             localstack/localstack:${{ env.LOCALSTACK_VERSION }}
 
       - name: Wait for LocalStack
-        working-directory: semana-4/dia-27
         run: |
           chmod +x scripts/wait-for-localstack.sh
           ./scripts/wait-for-localstack.sh
 
       - name: Setup S3 Bucket
-        working-directory: semana-4/dia-27
         run: |
           chmod +x scripts/setup-localstack.sh
           ./scripts/setup-localstack.sh
@@ -100,7 +98,6 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        working-directory: semana-4/dia-27
         run: |
           terraform init \
             -backend-config="endpoint=http://localhost:4566" \
@@ -108,12 +105,10 @@ jobs:
             -backend-config="secret_key=test"
 
       - name: Select Workspace
-        working-directory: semana-4/dia-27
         run: |
           terraform workspace select ${{ github.event.inputs.environment }}
 
       - name: Backup Current State
-        working-directory: semana-4/dia-27
         run: |
           terraform state pull > backup-${{ github.event.inputs.environment }}-$(date +%Y%m%d-%H%M%S).json
         continue-on-error: true
@@ -126,13 +121,11 @@ jobs:
           retention-days: 30
 
       - name: Show Current Resources
-        working-directory: semana-4/dia-27
         run: |
           echo "=== Resources to be destroyed ==="
           terraform state list
 
       - name: Terraform Destroy
-        working-directory: semana-4/dia-27
         run: |
           terraform destroy \
             -var-file="environments/${{ github.event.inputs.environment }}.tfvars" \
@@ -147,7 +140,6 @@ jobs:
           awslocal s3 ls s3://terraform-state-roxs/ || echo "Bucket empty or not found"
 
       - name: Delete Workspace
-        working-directory: semana-4/dia-27
         run: |
           terraform workspace select default
           terraform workspace delete ${{ github.event.inputs.environment }}

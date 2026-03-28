@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'semana-4/dia-27/**'
+      - '**'
       - '.github/workflows/terraform-cd.yml'
   workflow_dispatch:
     inputs:
@@ -57,14 +57,12 @@ jobs:
 
       - name: Wait for LocalStack
         id: health
-        working-directory: semana-4/dia-27
         run: |
           chmod +x scripts/wait-for-localstack.sh
           ./scripts/wait-for-localstack.sh
           echo "ready=true" >> $GITHUB_OUTPUT
 
       - name: Setup S3 Bucket
-        working-directory: semana-4/dia-27
         run: |
           chmod +x scripts/setup-localstack.sh
           ./scripts/setup-localstack.sh
@@ -96,7 +94,6 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        working-directory: semana-4/dia-27
         run: |
           terraform init \
             -backend-config="endpoint=http://localhost:4566" \
@@ -104,23 +101,19 @@ jobs:
             -backend-config="secret_key=test"
 
       - name: Select Workspace
-        working-directory: semana-4/dia-27
         run: |
           terraform workspace new dev || terraform workspace select dev
 
       - name: Terraform Plan
-        working-directory: semana-4/dia-27
         run: |
           terraform plan -var-file="environments/dev.tfvars" -out=dev.tfplan
 
       - name: Terraform Apply
         if: github.event.inputs.action == 'apply' || github.event_name == 'push'
-        working-directory: semana-4/dia-27
         run: |
           terraform apply -auto-approve dev.tfplan
 
       - name: Show Outputs
-        working-directory: semana-4/dia-27
         run: terraform output
 
       - name: Verify Deployment
@@ -148,7 +141,6 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        working-directory: semana-4/dia-27
         run: |
           terraform init \
             -backend-config="endpoint=http://localhost:4566" \
@@ -156,23 +148,19 @@ jobs:
             -backend-config="secret_key=test"
 
       - name: Select Workspace
-        working-directory: semana-4/dia-27
         run: |
           terraform workspace new staging || terraform workspace select staging
 
       - name: Terraform Plan
-        working-directory: semana-4/dia-27
         run: |
           terraform plan -var-file="environments/staging.tfvars" -out=staging.tfplan
 
       - name: Terraform Apply
         if: github.event.inputs.action == 'apply'
-        working-directory: semana-4/dia-27
         run: |
           terraform apply -auto-approve staging.tfplan
 
       - name: Show Outputs
-        working-directory: semana-4/dia-27
         run: terraform output
 
   deploy-prod:
@@ -194,7 +182,6 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        working-directory: semana-4/dia-27
         run: |
           terraform init \
             -backend-config="endpoint=http://localhost:4566" \
@@ -202,12 +189,10 @@ jobs:
             -backend-config="secret_key=test"
 
       - name: Select Workspace
-        working-directory: semana-4/dia-27
         run: |
           terraform workspace new prod || terraform workspace select prod
 
       - name: Terraform Plan
-        working-directory: semana-4/dia-27
         run: |
           terraform plan -var-file="environments/prod.tfvars" -out=prod.tfplan
 
@@ -218,12 +203,10 @@ jobs:
 
       - name: Terraform Apply
         if: github.event.inputs.action == 'apply'
-        working-directory: semana-4/dia-27
         run: |
           terraform apply -auto-approve prod.tfplan
 
       - name: Show Outputs
-        working-directory: semana-4/dia-27
         run: terraform output
 
       - name: Create Deployment Tag
